@@ -153,6 +153,12 @@ function PaymentContent() {
           <ManualCheckout clientSecret={clientSecret} />
         </Elements>
       </div>
+      <span className="mt-4 text-sm w-full italic text-center text-slate-400">
+        For <b>Card Number</b> just enter 4242 4242 4242 4242
+        <br />
+        for <b>Expiration</b> enter any feature date, and <b>CVC</b> enter any
+        random values
+      </span>
     </div>
   );
 }
