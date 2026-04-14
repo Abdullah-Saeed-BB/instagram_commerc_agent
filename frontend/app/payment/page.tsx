@@ -1,118 +1,24 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { loadStripe } from "@stripe/stripe-js";
-import {
-  Elements,
-  CardNumberElement,
-  CardExpiryElement,
-  CardCvcElement,
-  useStripe,
-  useElements,
-} from "@stripe/react-stripe-js";
+import { Elements } from "@stripe/react-stripe-js";
+import { ManualCheckout } from "@/components/payment/ManualCheckout";
+import { BookingDetails } from "@/components/BookingDetails";
 
 const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
 const stripePromise = publishableKey ? loadStripe(publishableKey) : null;
 
-// Shared styles for the individual inputs
-const inputStyle = {
-  style: {
-    base: {
-      fontSize: "16px",
-      color: "#087BA3",
-      fontFamily: "ui-sans-serif, system-ui, sans-serif",
-      "::placeholder": { color: "#51A1BD" },
-    },
-    invalid: { color: "#ef4444" },
-  },
-};
-
-function ManualCheckout({ clientSecret }: { clientSecret: string }) {
-  const stripe = useStripe();
-  const elements = useElements();
-  const [isLoading, setIsLoading] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!stripe || !elements) return;
-
-    setIsLoading(true);
-    setMessage(null);
-
-    const { error, paymentIntent } = await stripe.confirmCardPayment(
-      clientSecret,
-      {
-        payment_method: {
-          card: elements.getElement(CardNumberElement)!,
-        },
-      },
-    );
-
-    if (error) {
-      setMessage(error.message ?? "Payment failed");
-    } else if (paymentIntent?.status === "succeeded") {
-      setMessage("Payment successful!");
-    }
-
-    setIsLoading(false);
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="w-full space-y-4">
-      {/* 1. Card Number Input */}
-      <div>
-        <label className="block text-sm font-medium text-[#51A1BD] mb-1">
-          Card Number
-        </label>
-        <div className="p-3 border border-gray-200 rounded-lg bg-white shadow-sm">
-          <CardNumberElement options={inputStyle} />
-        </div>
-      </div>
-
-      {/* 2. Expiry and CVC Row */}
-      <div className="flex gap-4">
-        <div className="flex-1">
-          <label className="block text-sm font-medium text-[#51A1BD] mb-1">
-            Expiration
-          </label>
-          <div className="p-3 border border-gray-200 rounded-lg bg-white shadow-sm">
-            <CardExpiryElement options={inputStyle} />
-          </div>
-        </div>
-        <div className="flex-1">
-          <label className="block text-sm font-medium text-[#51A1BD] mb-1">
-            CVC
-          </label>
-          <div className="p-3 border border-gray-200 rounded-lg bg-white shadow-sm">
-            <CardCvcElement options={inputStyle} />
-          </div>
-        </div>
-      </div>
-
-      <button
-        disabled={!stripe || isLoading}
-        className="w-full mt-2 py-3 bg-[#4F5759] text-white rounded-md font-semibold hover:bg-opacity-90 transition-all disabled:bg-gray-400 disabled:cursor-not-allowed"
-      >
-        {isLoading ? "Processing..." : "Pay Now"}
-      </button>
-
-      {message && (
-        <p
-          className={`mt-4 text-sm text-center ${message.includes("successful") ? "text-green-600" : "text-red-500"}`}
-        >
-          {message}
-        </p>
-      )}
-    </form>
-  );
-}
-
 function PaymentContent() {
   const searchParams = useSearchParams();
   const clientSecret = searchParams.get("client_secret");
+  const service = searchParams.get("service");
+  const price = searchParams.get("price");
+  const bookingDatetime = searchParams.get("booking_datetime");
+  const customer_name = searchParams.get("name");
+  const barber = searchParams.get("barber");
 
   if (!publishableKey) {
     return (
@@ -132,40 +38,73 @@ function PaymentContent() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F7F7] flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen bg-[#F5F7F7] flex flex-col items-center py-12 px-4 md:pt-20 md:pb-6">
       {/* Brand Section */}
-      <div className="mb-8 text-center">
-        <div className="relative w-16 h-16 mx-auto mb-3">
+      <div className="mb-12 text-center">
+        <div className="relative w-16 h-16 mx-auto mb-4 group">
+          <div className="absolute inset-0 bg-[#087BA3] opacity-20 blur-xl group-hover:opacity-30 transition-opacity rounded-full"></div>
           <Image
             src="/logo.png"
             alt="Logo"
             fill
-            className="object-contain"
+            className="object-contain relative z-10"
             priority
           />
         </div>
-        <h1 className="text-2xl font-bold text-[#087BA3]">Silver blade</h1>
+        <h1 className="text-3xl font-bold text-[#087BA3] tracking-tight">
+          Silver blade
+        </h1>
+        <p className="text-[#51A1BD] text-sm mt-1">Secure Payment Portal</p>
       </div>
 
-      {/* Payment Container */}
-      <div className="w-full max-w-md bg-white p-6 sm:p-10 rounded-2xl shadow-sm border border-gray-100">
-        <Elements stripe={stripePromise}>
-          <ManualCheckout clientSecret={clientSecret} />
-        </Elements>
+      {/* Responsive Layout Container */}
+      <div className="w-full max-w-5xl flex flex-col lg:flex-row items-center lg:items-start justify-center gap-8 lg:gap-12">
+        {/* Payment Form Container */}
+        <div className="w-full max-w-md bg-white p-8 sm:p-10 rounded-2xl shadow-sm border border-gray-100 order-1 relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-1 bg-[#087BA3]"></div>
+          <Elements stripe={stripePromise}>
+            <ManualCheckout clientSecret={clientSecret} />
+          </Elements>
+        </div>
+
+        {/* Booking Details Container */}
+        <div className="w-full max-w-md lg:max-w-sm order-2">
+          <BookingDetails
+            service={service}
+            price={price}
+            bookingDatetime={bookingDatetime}
+            customer_name={customer_name}
+            barber={barber}
+          />
+        </div>
       </div>
-      <span className="mt-4 text-sm w-full italic text-center text-slate-400">
-        For <b>Card Number</b> just enter 4242 4242 4242 4242
-        <br />
-        for <b>Expiration</b> enter any feature date, and <b>CVC</b> enter any
-        random values
-      </span>
+
+      {/* Helper Footer */}
+      <div className="mt-12 text-center max-w-md">
+        <p className="text-xs uppercase tracking-widest text-slate-400 font-bold mb-4">
+          Test Mode Instructions
+        </p>
+        <span className="text-sm italic text-[#51A1BD] leading-relaxed block bg-white/50 py-3 px-6 rounded-lg border border-slate-100">
+          For <b>Card Number</b> enter{" "}
+          <code className="text-[#087BA3] font-bold">4242 4242 4242 4242</code>
+          <br />
+          For <b>Expiration</b> enter any future date, and <b>CVC</b> enter any
+          random values
+        </span>
+      </div>
     </div>
   );
 }
 
 export default function FinalPaymentPage() {
   return (
-    <Suspense fallback={<div className="h-screen bg-[#F5F7F7]" />}>
+    <Suspense
+      fallback={
+        <div className="h-screen bg-[#F5F7F7] flex items-center justify-center">
+          <div className="w-12 h-12 border-4 border-[#51A1BD] border-t-[#087BA3] rounded-full animate-spin"></div>
+        </div>
+      }
+    >
       <PaymentContent />
     </Suspense>
   );

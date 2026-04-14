@@ -14,17 +14,34 @@ import os
 load_dotenv()
 
 app = FastAPI()
+
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 endpoint_secret = os.getenv("STRIPE_WEBHOOK_SECRET")
+frontend_url = os.getenv("FRONTEND_URL")
 
 @app.post("/create-payment")
 def create_payment():
+    bill_data = {
+        "service": "cut-hair",
+        "price": 20, 
+        "booking_datetime": "2026-04-14T10:00:00",
+        "name": "Khalid",
+        "barber": "Moe"
+    } 
+
     intent = stripe.PaymentIntent.create(
-        amount=2000,
+        amount=bill_data["price"] * 100,
         currency="usd",
         automatic_payment_methods={"enabled": True},
-    )   
-    return {"client_secret": intent.client_secret}
+    )
+
+    payment_link = f"{frontend_url}/payment?client_secret={intent.client_secret}&"
+
+    for key, value in bill_data.items():
+        payment_link += f"{key}={value}&"
+    payment_link = payment_link[:-1]
+
+    return {"payment_link": payment_link}
 
 
 @app.post("/webhook")
