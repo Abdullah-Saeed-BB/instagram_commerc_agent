@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { loadStripe } from "@stripe/stripe-js";
@@ -11,14 +11,48 @@ import { BookingDetails } from "@/components/BookingDetails";
 const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
 const stripePromise = publishableKey ? loadStripe(publishableKey) : null;
 
+interface BookingData {
+  id: string;
+  service: string;
+  amount: number;
+  booking_datetime: string;
+  customer_name: string;
+  client_secret: string;
+  barber: {
+    name: string;
+  };
+}
+
 function PaymentContent() {
   const searchParams = useSearchParams();
-  const clientSecret = searchParams.get("client_secret");
-  const service = searchParams.get("service");
-  const price = searchParams.get("price");
-  const bookingDatetime = searchParams.get("booking_datetime");
-  const customer_name = searchParams.get("name");
-  const barber = searchParams.get("barber");
+  const id = searchParams.get("id");
+  const [bookingData, setBookingData] = useState<BookingData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!id) {
+      setLoading(false);
+      return;
+    }
+
+    const fetchBooking = async () => {
+      try {
+        const response = await fetch(`http://localhost:8000/booking/${id}`);
+        if (!response.ok) {
+          throw new Error("Failed to fetch booking details");
+        }
+        const data = await response.json();
+        setBookingData(data);
+      } catch (err: any) {
+        setError(err.message || "Something went wrong");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBooking();
+  }, [id]);
 
   if (!publishableKey) {
     return (
@@ -26,12 +60,51 @@ function PaymentContent() {
     );
   }
 
-  if (!clientSecret) {
+  if (!id) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-[#F5F7F7] p-4">
         <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-100 max-w-sm w-full text-center">
           <h2 className="text-[#087BA3] font-bold text-xl mb-2">Error</h2>
-          <p className="text-[#51A1BD]">Missing client_secret parameter.</p>
+          <p className="text-[#51A1BD]">Missing booking ID parameter.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="h-screen bg-[#F5F7F7] flex items-center justify-center">
+        <div className="w-12 h-12 border-4 border-[#51A1BD] border-t-[#087BA3] rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  if (error || !bookingData) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-[#F5F7F7] p-4">
+        <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-100 max-w-sm w-full text-center">
+          <h2 className="text-[#087BA3] font-bold text-xl mb-2">Error</h2>
+          <p className="text-[#51A1BD]">{error || "Booking not found."}</p>
+        </div>
+      </div>
+    );
+  }
+
+  const {
+    client_secret,
+    service,
+    amount,
+    booking_datetime,
+    customer_name,
+    barber,
+  } = bookingData;
+
+  if (!client_secret) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-[#F5F7F7] p-4">
+        <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-100 max-w-sm w-full text-center">
+          <h2 className="text-[#087BA3] font-bold text-xl mb-2">Error</h2>
+          <p className="text-[#51A1BD]">Missing payment information.</p>
         </div>
       </div>
     );
@@ -63,7 +136,7 @@ function PaymentContent() {
         <div className="w-full max-w-md bg-white p-8 sm:p-10 rounded-2xl shadow-sm border border-gray-100 order-1 relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-1 bg-[#087BA3]"></div>
           <Elements stripe={stripePromise}>
-            <ManualCheckout clientSecret={clientSecret} />
+            <ManualCheckout clientSecret={client_secret} />
           </Elements>
         </div>
 
@@ -71,10 +144,10 @@ function PaymentContent() {
         <div className="w-full max-w-md lg:max-w-sm order-2">
           <BookingDetails
             service={service}
-            price={price}
-            bookingDatetime={bookingDatetime}
+            price={amount.toString()}
+            bookingDatetime={booking_datetime}
             customer_name={customer_name}
-            barber={barber}
+            barber={barber.name}
           />
         </div>
       </div>
