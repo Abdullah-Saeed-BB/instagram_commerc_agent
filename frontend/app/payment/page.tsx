@@ -6,22 +6,11 @@ import Image from "next/image";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements } from "@stripe/react-stripe-js";
 import { ManualCheckout } from "@/components/payment/ManualCheckout";
-import { BookingDetails } from "@/components/BookingDetails";
+import { BookingDetails } from "@/components/payment/BookingDetails";
+import { BookingData } from "@/components/payment/types";
 
 const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
 const stripePromise = publishableKey ? loadStripe(publishableKey) : null;
-
-interface BookingData {
-  id: string;
-  service: string;
-  amount: number;
-  booking_datetime: string;
-  customer_name: string;
-  client_secret: string;
-  barber: {
-    name: string;
-  };
-}
 
 function PaymentContent() {
   const searchParams = useSearchParams();
@@ -38,12 +27,15 @@ function PaymentContent() {
 
     const fetchBooking = async () => {
       try {
-        const response = await fetch(`http://localhost:8000/booking/${id}`);
+        const url = `${process.env.NEXT_PUBLIC_BACKEND_URL}/booking/${id}`;
+        const response = await fetch(url);
+        const result = await response.json();
         if (!response.ok) {
           throw new Error("Failed to fetch booking details");
+        } else if (result.status_code && result.status_code !== 200) {
+          throw new Error(result.detail);
         }
-        const data = await response.json();
-        setBookingData(data);
+        setBookingData(result);
       } catch (err: any) {
         setError(err.message || "Something went wrong");
       } finally {
@@ -96,6 +88,7 @@ function PaymentContent() {
     amount,
     booking_datetime,
     customer_name,
+    payment_status,
     barber,
   } = bookingData;
 
@@ -133,12 +126,14 @@ function PaymentContent() {
       {/* Responsive Layout Container */}
       <div className="w-full max-w-5xl flex flex-col lg:flex-row items-center lg:items-start justify-center gap-8 lg:gap-12">
         {/* Payment Form Container */}
-        <div className="w-full max-w-md bg-white p-8 sm:p-10 rounded-2xl shadow-sm border border-gray-100 order-1 relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-1 bg-[#087BA3]"></div>
-          <Elements stripe={stripePromise}>
-            <ManualCheckout clientSecret={client_secret} />
-          </Elements>
-        </div>
+        {payment_status === "PENDING" && (
+          <div className="w-full max-w-md bg-white p-8 sm:p-10 rounded-2xl shadow-sm border border-gray-100 order-1 relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-1 bg-[#087BA3]"></div>
+            <Elements stripe={stripePromise}>
+              <ManualCheckout clientSecret={client_secret} />
+            </Elements>
+          </div>
+        )}
 
         {/* Booking Details Container */}
         <div className="w-full max-w-md lg:max-w-sm order-2">
@@ -146,25 +141,30 @@ function PaymentContent() {
             service={service}
             price={amount.toString()}
             bookingDatetime={booking_datetime}
-            customer_name={customer_name}
+            customerName={customer_name}
             barber={barber.name}
+            paymentStatus={payment_status}
           />
         </div>
       </div>
 
       {/* Helper Footer */}
-      <div className="mt-12 text-center max-w-md">
-        <p className="text-xs uppercase tracking-widest text-slate-400 font-bold mb-4">
-          Test Mode Instructions
-        </p>
-        <span className="text-sm italic text-[#51A1BD] leading-relaxed block bg-white/50 py-3 px-6 rounded-lg border border-slate-100">
-          For <b>Card Number</b> enter{" "}
-          <code className="text-[#087BA3] font-bold">4242 4242 4242 4242</code>
-          <br />
-          For <b>Expiration</b> enter any future date, and <b>CVC</b> enter any
-          random values
-        </span>
-      </div>
+      {payment_status === "PENDING" && (
+        <div className="mt-12 text-center max-w-md">
+          <p className="text-xs uppercase tracking-widest text-slate-400 font-bold mb-4">
+            Test Mode Instructions
+          </p>
+          <span className="text-sm italic text-[#51A1BD] leading-relaxed block bg-white/50 py-3 px-6 rounded-lg border border-slate-100">
+            For <b>Card Number</b> enter{" "}
+            <code className="text-[#087BA3] font-bold">
+              4242 4242 4242 4242
+            </code>
+            <br />
+            For <b>Expiration</b> enter any future date, and <b>CVC</b> enter
+            any random values
+          </span>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,17 +1,28 @@
+import { PaymentStatus } from "./types";
+
 export function BookingDetails({
   service,
   price,
   bookingDatetime,
-  customer_name,
+  customerName,
   barber,
+  paymentStatus,
 }: {
   service: string | null;
   price: string | null;
   bookingDatetime: string | null;
-  customer_name: string | null;
+  customerName: string | null;
+  paymentStatus: PaymentStatus | null;
   barber: string | null;
 }) {
-  if (!service && !price && !bookingDatetime && !customer_name && !barber)
+  if (
+    !service &&
+    !price &&
+    !bookingDatetime &&
+    !customerName &&
+    !barber &&
+    !paymentStatus
+  )
     return null;
 
   const formattedDate = bookingDatetime
@@ -49,11 +60,11 @@ export function BookingDetails({
       </h2>
 
       <div className="space-y-5">
-        {customer_name && (
+        {customerName && (
           <div className="flex justify-between items-center py-1">
             <span className="text-[#51A1BD] text-sm font-medium">Customer</span>
             <span className="text-[#4F5759] font-semibold ">
-              {customer_name}
+              {customerName}
             </span>
           </div>
         )}
@@ -70,6 +81,23 @@ export function BookingDetails({
             <span className="text-[#51A1BD] text-sm font-medium">Service</span>
             <span className="text-[#4F5759] font-semibold bg-[#F5F7F7] px-3 py-1 rounded-full text-sm text-right max-w-[150px]">
               {service}
+            </span>
+          </div>
+        )}
+
+        {paymentStatus && (
+          <div className="flex justify-between items-start py-1">
+            <span className="text-[#51A1BD] text-sm font-medium">Status</span>
+            <span
+              className={`${
+                paymentStatus === "SUCCESSFUL"
+                  ? "bg-green-100 text-green-800"
+                  : paymentStatus === "CANCELED"
+                    ? "bg-red-100 text-red-800"
+                    : "bg-yellow-100 text-yellow-800"
+              } font-semibold px-3 py-1 rounded-full capitalize text-sm text-right max-w-[150px]`}
+            >
+              {paymentStatus.toLowerCase()}
             </span>
           </div>
         )}
