@@ -20,7 +20,6 @@ async def get_booking(id: str, db: Session = Depends(get_db)):
 
         # Fetch payment intent from stripe to get client_secret
         intent = stripe.PaymentIntent.retrieve(booking.payment_id)
-        print(intent.status)
         if intent.status == "succeeded" and booking.payment_status != "SUCCESSFUL":
             booking.payment_status = "SUCCESSFUL"
             await db.commit()

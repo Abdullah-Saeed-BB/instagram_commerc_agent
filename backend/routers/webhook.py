@@ -49,7 +49,7 @@ async def webhook(request: Request, db: Session = Depends(get_db)):
             booking.payment_status = "FAILED"
             await db.commit()
         else:
-            print("Payment type:", event["type"], " ID:", event["id"])
+            print("Unknown Payment type:", event["type"], " ID:", event["id"])
     except Exception as e:
         print("Webhook - Error message:", e)
         raise HTTPException(status_code=500, detail=str(e))

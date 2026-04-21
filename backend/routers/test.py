@@ -1,6 +1,6 @@
 # These are some test routes, that should be removed in production.
 # It perform the AI operations as test.
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from db.session import get_db
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -9,6 +9,7 @@ from db.models import Booking, Barber
 import stripe
 from datetime import datetime
 import os
+from dependencies import get_arq_pool
 
 router = APIRouter()
 
@@ -16,15 +17,14 @@ frontend_url = os.getenv("FRONTEND_URL")
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 
 @router.post("/create-payment")
-async def create_payment(db: Session = Depends(get_db)):
+async def create_payment(db: Session = Depends(get_db), arq_pool = Depends(get_arq_pool)):
     bill_data = {
         "service": "cutting-hair",
         "price": 20, 
         "booking_datetime": datetime(2026, 4, 14, 10, 0, 0),
         "name": "Khalid",
         "barber": "Moe Johnson"
-    } 
-
+    }
 
     try:
         intent = stripe.PaymentIntent.create(
@@ -46,6 +46,13 @@ async def create_payment(db: Session = Depends(get_db)):
         )
         db.add(new_booking)
         await db.commit()
+
+        await arq_pool.enqueue_job(
+            'cancel_booking_task',
+            booking_id=new_booking.id,
+            _defer_by=30
+        )
+
 
         payment_link = f"{frontend_url}/payment?id={new_booking.id}"
 
