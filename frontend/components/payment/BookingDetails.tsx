@@ -79,8 +79,8 @@ export function BookingDetails({
         {service && (
           <div className="flex justify-between items-start py-1">
             <span className="text-[#51A1BD] text-sm font-medium">Service</span>
-            <span className="text-[#4F5759] font-semibold bg-[#F5F7F7] px-3 py-1 rounded-full text-sm text-right max-w-[150px]">
-              {service}
+            <span className="text-[#4F5759] font-semibold bg-[#F5F7F7] capitalize italic text-right max-w-[150px]">
+              {service.replaceAll("_", " ")}
             </span>
           </div>
         )}

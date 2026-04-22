@@ -5,7 +5,7 @@ from db.session import get_db
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from fastapi import Depends, HTTPException
-from db.models import Booking, Barber
+from db.models import Booking, Barber, Services
 import stripe
 from datetime import datetime
 import os
@@ -19,14 +19,20 @@ stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 @router.post("/create-payment")
 async def create_payment(db: Session = Depends(get_db), arq_pool = Depends(get_arq_pool)):
     bill_data = {
-        "service": "cutting-hair",
-        "price": 20, 
-        "booking_datetime": datetime(2026, 4, 14, 10, 0, 0),
+        "service": "the_signature_fade",
+        "booking_datetime": datetime(2026, 4, 25, 10, 0, 0),
         "name": "Khalid",
         "barber": "Moe Johnson"
     }
 
     try:
+        service_id_stmt = select(Services).where(Services.name == bill_data["service"])
+        result = (await db.execute(service_id_stmt)).scalar_one_or_none()
+        if not result:
+            raise HTTPException(status_code=404, detail="Service not found")
+        service_id = result.id
+        bill_data["price"] = result.price
+
         intent = stripe.PaymentIntent.create(
             amount=bill_data["price"] * 100,
             currency="usd",
@@ -40,9 +46,9 @@ async def create_payment(db: Session = Depends(get_db), arq_pool = Depends(get_a
         barber_id = result.id
 
         new_booking = Booking(
-            payment_id=intent.id, service=bill_data["service"],
-            amount=bill_data["price"], booking_datetime=bill_data["booking_datetime"],
-            customer_name=bill_data["name"], barber_id=barber_id
+            payment_id=intent.id, service_id=service_id, barber_id=barber_id,
+            booking_datetime=bill_data["booking_datetime"],
+            customer_name=bill_data["name"]
         )
         db.add(new_booking)
         await db.commit()
@@ -52,7 +58,6 @@ async def create_payment(db: Session = Depends(get_db), arq_pool = Depends(get_a
             booking_id=new_booking.id,
             _defer_by=30
         )
-
 
         payment_link = f"{frontend_url}/payment?id={new_booking.id}"
 

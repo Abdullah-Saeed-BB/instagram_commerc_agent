@@ -11,12 +11,15 @@ router = APIRouter()
 @router.get("/{id}")
 async def get_booking(id: str, db: Session = Depends(get_db)):
     try:
-        stmt = select(Booking).options(selectinload(Booking.barber)).where(Booking.id == id)
+        stmt = select(Booking).options(
+            selectinload(Booking.barber),
+            selectinload(Booking.service)
+        ).where(Booking.id == id)
         result = await db.execute(stmt)
         booking = result.scalar_one_or_none()
         
         if not booking:
-            return HTTPException(status_code=404, detail="Booking not found")
+            raise HTTPException(status_code=404, detail="Booking not found")
 
         # Fetch payment intent from stripe to get client_secret
         intent = stripe.PaymentIntent.retrieve(booking.payment_id)
@@ -29,8 +32,8 @@ async def get_booking(id: str, db: Session = Depends(get_db)):
         
         return {
             "id": str(booking.id),
-            "service": booking.service,
-            "amount": float(booking.amount),
+            "service": booking.service.name,
+            "amount": booking.service.price,
             "booking_datetime": booking.booking_datetime.isoformat(),
             "customer_name": booking.customer_name,
             "client_secret": intent.client_secret,
