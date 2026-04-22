@@ -9,7 +9,7 @@ class Base(DeclarativeBase):
     """Shared declarative base — import this in every model file."""
     pass
 
-class BookingStatus(str, Enum):
+class PaymentStatus(str, Enum):
     PENDING = "PENDING"
     SUCCESSFUL = "SUCCESSFUL"
     FAILED = "FAILED"
@@ -67,10 +67,10 @@ class Booking(Base):
     amount: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
     service: Mapped[str] = mapped_column(String(100), nullable=False)
     barber_id: Mapped[int] = mapped_column(ForeignKey("barbers.id"), nullable=False)
-    payment_status: Mapped[BookingStatus] = mapped_column(
-        SqlEnum(BookingStatus),
-        default=BookingStatus.PENDING,
-        server_default=BookingStatus.PENDING.value,  # ✅ important
+    payment_status: Mapped[PaymentStatus] = mapped_column(
+        SqlEnum(PaymentStatus),
+        default=PaymentStatus.PENDING,
+        server_default=PaymentStatus.PENDING.value,  # ✅ important
         nullable=False
     )
 
