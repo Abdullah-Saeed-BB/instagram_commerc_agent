@@ -6,7 +6,6 @@ import os
 from arq import create_pool
 from arq.connections import RedisSettings
 from contextlib import asynccontextmanager
-import logging
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -43,8 +42,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
 
 
 from routers import booking, webhook, test

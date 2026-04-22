@@ -12,11 +12,12 @@ load_dotenv(os.path.join(backend_dir, ".env"))
 # Project root is one level up from backend
 sys.path.insert(0, os.path.abspath(os.path.join(backend_dir, "..")))
 
-from backend.db.models import Base
-from backend.db.session import engine
+from models import Base
+from session import engine
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy import text
 from session import make_database_url
+import pandas as pd
 
 DB_NAME = os.getenv("DB_NAME")
 async def create_database_if_not_exists():
@@ -57,6 +58,16 @@ async def init_db():
                 text("INSERT INTO barbers (name, career_start_date) VALUES (:name, :career_start_date)"),
                 {"name": barber["name"], "career_start_date": barber["career_start_date"]}
             )
+
+        services = pd.read_csv("./data/services.csv")
+        services_records = services.to_dict(orient="records")
+
+        for service in services_records:
+            await conn.execute(
+                text("INSERT INTO services (name, description, price) VALUES (:name, :description, :price)"),
+                {"name": service["service_title"], "description": service["description"], "price": int(service["price"].replace("$", ""))}
+            )
+        
         await conn.commit()
     print("Database initialization complete.")
 
