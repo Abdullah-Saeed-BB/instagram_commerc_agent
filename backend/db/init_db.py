@@ -60,12 +60,17 @@ async def init_db():
             )
 
         services = pd.read_csv("./data/services.csv")
+        services["title"] = services["title"]\
+            .str.replace(" ", "_").str.replace("&", "and")\
+            .str.replace('"', "").str.lower()
+        services["price"] = pd.to_numeric(
+            services["price"].str.replace("$", ""))
         services_records = services.to_dict(orient="records")
 
         for service in services_records:
             await conn.execute(
                 text("INSERT INTO services (name, description, price) VALUES (:name, :description, :price)"),
-                {"name": service["service_title"], "description": service["description"], "price": int(service["price"].replace("$", ""))}
+                {"name": service["title"], "description": service["description"], "price": service["price"]}
             )
         
         await conn.commit()

@@ -64,8 +64,7 @@ class Booking(Base):
     payment_id: Mapped[str] = mapped_column(String(35), nullable=False) 
     customer_name: Mapped[str] = mapped_column(String(100), nullable=False)
     booking_datetime: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    amount: Mapped[float] = mapped_column(Numeric(10, 2), nullable=False)
-    service: Mapped[str] = mapped_column(String(100), nullable=False)
+    service_id: Mapped[int] = mapped_column(ForeignKey("services.id"), nullable=False)
     barber_id: Mapped[int] = mapped_column(ForeignKey("barbers.id"), nullable=False)
     payment_status: Mapped[PaymentStatus] = mapped_column(
         SqlEnum(PaymentStatus),
@@ -76,6 +75,7 @@ class Booking(Base):
 
     # Relationship
     barber: Mapped["Barber"] = relationship("Barber", back_populates="bookings")
+    service: Mapped["Services"] = relationship("Services", back_populates="bookings")
 
     def __repr__(self) -> str:
         return f"<Booking(customer={self.customer_name}, status={self.status})>"
