@@ -20,10 +20,13 @@ stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 async def create_payment(db: Session = Depends(get_db), arq_pool = Depends(get_arq_pool)):
     bill_data = {
         "service": "the_signature_fade",
-        "booking_datetime": datetime(2026, 4, 25, 10, 0, 0),
+        "booking_datetime": datetime(2026, 4, 21, 10, 0, 0),
         "name": "Khalid",
         "barber": "Moe Johnson"
     }
+
+    if bill_data["booking_datetime"] < datetime.now():
+        raise HTTPException(status_code=400, detail="Booking datetime must be in the future")
 
     try:
         service_id_stmt = select(Services).where(Services.name == bill_data["service"])
@@ -56,7 +59,7 @@ async def create_payment(db: Session = Depends(get_db), arq_pool = Depends(get_a
         await arq_pool.enqueue_job(
             'cancel_booking_task',
             booking_id=new_booking.id,
-            _defer_by=30
+            _defer_by=30 * 60
         )
 
         payment_link = f"{frontend_url}/payment?id={new_booking.id}"
