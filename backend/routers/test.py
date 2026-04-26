@@ -19,39 +19,41 @@ stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 @router.post("/create-payment")
 async def create_payment(db: Session = Depends(get_db), arq_pool = Depends(get_arq_pool)):
     bill_data = {
-        "service": "the_signature_fade",
-        "booking_datetime": datetime(2026, 4, 21, 10, 0, 0),
-        "name": "Khalid",
-        "barber": "Moe Johnson"
+        # "service": "the_signature_fade",
+        # "booking_datetime": datetime(2026, 4, 29, 10, 0, 0),
+        # "name": "Khalid",
+        # "barber": "Moe Johnson"
     }
 
-    if bill_data["booking_datetime"] < datetime.now():
+    if "booking_datetime" in bill_data and bill_data["booking_datetime"] < datetime.now():
         raise HTTPException(status_code=400, detail="Booking datetime must be in the future")
 
     try:
-        service_id_stmt = select(Services).where(Services.name == bill_data["service"])
-        result = (await db.execute(service_id_stmt)).scalar_one_or_none()
-        if not result:
-            raise HTTPException(status_code=404, detail="Service not found")
-        service_id = result.id
-        bill_data["price"] = result.price
+        service_id = None
+        if "service" in bill_data:        
+            service_id_stmt = select(Services).where(Services.name == bill_data["service"])
+            service_result = (await db.execute(service_id_stmt)).scalar_one_or_none()
+            service_id = service_result.id if service_result else None
 
-        intent = stripe.PaymentIntent.create(
-            amount=bill_data["price"] * 100,
-            currency="usd",
-            automatic_payment_methods={"enabled": True},
-        )
+        barber_id = None
+        if "barber" in bill_data:
+            barber_id_stmt = select(Barber).where(Barber.name == bill_data["barber"])
+            barber_result = (await db.execute(barber_id_stmt)).scalar_one_or_none()
+            barber_id = barber_result.id if barber_result else None
 
-        barber_id_stmt = select(Barber).where(Barber.name == bill_data["barber"])
-        result = (await db.execute(barber_id_stmt)).scalar_one_or_none()
-        if not result:
-            raise HTTPException(status_code=404, detail="Barber not found")
-        barber_id = result.id
+        intent_id = None
+        if service_id and service_result and barber_id and bill_data.get("name") and bill_data.get("booking_datetime"):
+            intent = stripe.PaymentIntent.create(
+                amount=int(service_result.price * 100),
+                currency="usd",
+                automatic_payment_methods={"enabled": True},
+            )
+            intent_id = intent.id
 
         new_booking = Booking(
-            payment_id=intent.id, service_id=service_id, barber_id=barber_id,
-            booking_datetime=bill_data["booking_datetime"],
-            customer_name=bill_data["name"]
+            payment_id=intent_id, service_id=service_id, barber_id=barber_id,
+            booking_datetime=bill_data.get("booking_datetime"),
+            customer_name=bill_data.get("name")
         )
         db.add(new_booking)
         await db.commit()

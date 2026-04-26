@@ -92,16 +92,7 @@ function PaymentContent() {
     barber,
   } = bookingData;
 
-  if (!client_secret) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-[#F5F7F7] p-4">
-        <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-100 max-w-sm w-full text-center">
-          <h2 className="text-[#087BA3] font-bold text-xl mb-2">Error</h2>
-          <p className="text-[#51A1BD]">Missing payment information.</p>
-        </div>
-      </div>
-    );
-  }
+  // Removed missing client_secret check so the user can see edit form
 
   return (
     <div className="min-h-screen bg-[#F5F7F7] flex flex-col items-center py-12 px-4 md:pt-20 md:pb-6">
@@ -126,24 +117,30 @@ function PaymentContent() {
       {/* Responsive Layout Container */}
       <div className="w-full max-w-5xl flex flex-col lg:flex-row items-center lg:items-start justify-center gap-8 lg:gap-12">
         {/* Payment Form Container */}
-        {payment_status === "PENDING" && (
+        {payment_status === "PENDING" && client_secret ? (
           <div className="w-full max-w-md bg-white p-8 sm:p-10 rounded-2xl shadow-sm border border-gray-100 order-1 relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-1 bg-[#087BA3]"></div>
             <Elements stripe={stripePromise}>
               <ManualCheckout clientSecret={client_secret} />
             </Elements>
           </div>
-        )}
+        ) : payment_status === "PENDING" && !client_secret ? (
+          <div className="w-full max-w-md bg-white p-8 sm:p-10 rounded-2xl shadow-sm border border-gray-100 order-1 flex items-center justify-center text-center">
+             <p className="text-[#51A1BD]">Please fill in the missing booking details to proceed with payment.</p>
+          </div>
+        ) : null}
 
         {/* Booking Details Container */}
         <div className="w-full max-w-md lg:max-w-sm order-2">
           <BookingDetails
+            id={id}
             service={service}
-            price={amount.toString()}
+            price={amount?.toString() || null}
             bookingDatetime={booking_datetime}
             customerName={customer_name}
-            barber={barber.name}
+            barber={barber?.name || null}
             paymentStatus={payment_status}
+            onSaveSuccess={() => window.location.reload()}
           />
         </div>
       </div>

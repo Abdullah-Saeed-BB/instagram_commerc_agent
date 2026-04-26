@@ -64,11 +64,11 @@ class Booking(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), onupdate=func.now(), nullable=False
     )
-    payment_id: Mapped[str] = mapped_column(String(35), nullable=False) 
-    customer_name: Mapped[str] = mapped_column(String(100), nullable=False)
-    booking_datetime: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    service_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("services.id"), nullable=False)
-    barber_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("barbers.id"), nullable=False)
+    payment_id: Mapped[str | None] = mapped_column(String(35), nullable=True) 
+    customer_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    booking_datetime: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    service_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("services.id"), nullable=True)
+    barber_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("barbers.id"), nullable=True)
     payment_status: Mapped[PaymentStatus] = mapped_column(
         SqlEnum(PaymentStatus),
         default=PaymentStatus.PENDING,
