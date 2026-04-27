@@ -6,17 +6,20 @@ interface BookingFormProps {
   onSuccess: () => void;
 }
 
-export const BookingForm: React.FC<BookingFormProps> = ({ booking, onSuccess }) => {
+export const BookingForm: React.FC<BookingFormProps> = ({
+  booking,
+  onSuccess,
+}) => {
   const [customerName, setCustomerName] = useState(booking.customer_name || "");
   const [service, setService] = useState(booking.service || "");
   const [barber, setBarber] = useState(booking.barber?.name || "");
   const [bookingDate, setBookingDate] = useState("");
   const [bookingTime, setBookingTime] = useState("");
-  
+
   const [services, setServices] = useState<ServiceData[]>([]);
   const [barbers, setBarbers] = useState<BarberData[]>([]);
   const [availableSlots, setAvailableSlots] = useState<string[]>([]);
-  
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,11 +28,13 @@ export const BookingForm: React.FC<BookingFormProps> = ({ booking, onSuccess }) 
     if (booking.booking_datetime) {
       const dt = new Date(booking.booking_datetime);
       const tzOffset = dt.getTimezoneOffset() * 60000; // offset in milliseconds
-      const localISOTime = (new Date(dt.getTime() - tzOffset)).toISOString().slice(0, 10);
+      const localISOTime = new Date(dt.getTime() - tzOffset)
+        .toISOString()
+        .slice(0, 10);
       setBookingDate(localISOTime);
-      
-      const hours = dt.getHours().toString().padStart(2, '0');
-      const minutes = dt.getMinutes().toString().padStart(2, '0');
+
+      const hours = dt.getHours().toString().padStart(2, "0");
+      const minutes = dt.getMinutes().toString().padStart(2, "0");
       setBookingTime(`${hours}:${minutes}`);
     }
   }, [booking.booking_datetime]);
@@ -37,13 +42,13 @@ export const BookingForm: React.FC<BookingFormProps> = ({ booking, onSuccess }) 
   // Fetch initial data
   useEffect(() => {
     fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/booking/data/services`)
-      .then(res => res.json())
-      .then(data => setServices(data))
+      .then((res) => res.json())
+      .then((data) => setServices(data))
       .catch(console.error);
 
     fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/booking/data/barbers`)
-      .then(res => res.json())
-      .then(data => setBarbers(data))
+      .then((res) => res.json())
+      .then((data) => setBarbers(data))
       .catch(console.error);
   }, []);
 
@@ -51,22 +56,22 @@ export const BookingForm: React.FC<BookingFormProps> = ({ booking, onSuccess }) 
   useEffect(() => {
     if (bookingDate) {
       let url = `${process.env.NEXT_PUBLIC_BACKEND_URL}/booking/availability?date=${bookingDate}`;
-      
+
       if (barber) {
-        const barberObj = barbers.find(b => b.name === barber);
+        const barberObj = barbers.find((b) => b.name === barber);
         if (barberObj) {
           url += `&barber_id=${barberObj.id}`;
         }
       }
 
       fetch(url)
-        .then(res => res.json())
-        .then(data => {
+        .then((res) => res.json())
+        .then((data) => {
           if (data.available_slots) {
             setAvailableSlots(data.available_slots);
             // If the selected time is no longer available, clear it
             if (bookingTime && !data.available_slots.includes(bookingTime)) {
-               // We don't clear it immediately in case it's their existing booked slot
+              // We don't clear it immediately in case it's their existing booked slot
             }
           }
         })
@@ -91,16 +96,19 @@ export const BookingForm: React.FC<BookingFormProps> = ({ booking, onSuccess }) 
     const combinedDateTime = `${bookingDate}T${bookingTime}:00`;
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/booking/${booking.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          customer_name: customerName,
-          service: service,
-          barber: barber,
-          booking_datetime: combinedDateTime
-        }),
-      });
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/booking/${booking.id}`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            customer_name: customerName,
+            service: service,
+            barber: barber,
+            booking_datetime: combinedDateTime,
+          }),
+        },
+      );
 
       if (!response.ok) {
         const result = await response.json();
@@ -116,16 +124,25 @@ export const BookingForm: React.FC<BookingFormProps> = ({ booking, onSuccess }) 
   };
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+    <form
+      onSubmit={handleSubmit}
+      className="bg-white p-6 rounded-xl shadow-sm border border-gray-200"
+    >
       <h2 className="text-xl font-semibold mb-4 text-gray-800 border-b pb-2">
         Complete Booking Details
       </h2>
-      
-      {error && <div className="mb-4 p-3 bg-red-50 text-red-600 rounded text-sm">{error}</div>}
 
-      <div className="space-y-4">
+      {error && (
+        <div className="mb-4 p-3 bg-red-50 text-red-600 rounded text-sm">
+          {error}
+        </div>
+      )}
+
+      <div className="space-y-4 text-gray-600">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Customer Name</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Customer Name
+          </label>
           <input
             type="text"
             className="w-full border border-gray-300 rounded-md p-2"
@@ -136,7 +153,9 @@ export const BookingForm: React.FC<BookingFormProps> = ({ booking, onSuccess }) 
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Service</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Service
+          </label>
           <select
             className="w-full border border-gray-300 rounded-md p-2 bg-white"
             value={service}
@@ -144,14 +163,18 @@ export const BookingForm: React.FC<BookingFormProps> = ({ booking, onSuccess }) 
             required
           >
             <option value="">Select a service</option>
-            {services.map(s => (
-              <option key={s.id} value={s.name}>{s.name} (${s.price})</option>
+            {services.map((s) => (
+              <option key={s.id} value={s.name}>
+                {s.name} (${s.price})
+              </option>
             ))}
           </select>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Barber</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Barber
+          </label>
           <select
             className="w-full border border-gray-300 rounded-md p-2 bg-white"
             value={barber}
@@ -159,26 +182,32 @@ export const BookingForm: React.FC<BookingFormProps> = ({ booking, onSuccess }) 
             required
           >
             <option value="">Select a barber</option>
-            {barbers.map(b => (
-              <option key={b.id} value={b.name}>{b.name}</option>
+            {barbers.map((b) => (
+              <option key={b.id} value={b.name}>
+                {b.name}
+              </option>
             ))}
           </select>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Date
+            </label>
             <input
               type="date"
               className="w-full border border-gray-300 rounded-md p-2"
               value={bookingDate}
               onChange={(e) => setBookingDate(e.target.value)}
-              min={new Date().toISOString().split('T')[0]}
+              min={new Date().toISOString().split("T")[0]}
               required
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Time</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Time
+            </label>
             <select
               className="w-full border border-gray-300 rounded-md p-2 bg-white"
               value={bookingTime}
@@ -188,10 +217,12 @@ export const BookingForm: React.FC<BookingFormProps> = ({ booking, onSuccess }) 
             >
               <option value="">Select a time</option>
               {bookingTime && !availableSlots.includes(bookingTime) && (
-                 <option value={bookingTime}>{bookingTime}</option>
+                <option value={bookingTime}>{bookingTime}</option>
               )}
-              {availableSlots.map(slot => (
-                <option key={slot} value={slot}>{slot}</option>
+              {availableSlots.map((slot) => (
+                <option key={slot} value={slot}>
+                  {slot}
+                </option>
               ))}
             </select>
           </div>

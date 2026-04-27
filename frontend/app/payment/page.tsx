@@ -9,15 +9,17 @@ import { BookingSummary } from "@/components/payment/BookingSummary";
 import { BookingForm } from "@/components/payment/BookingForm";
 import { CheckoutForm } from "@/components/payment/CheckoutForm";
 
-const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY 
-  ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) 
+const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+  ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
   : null;
 
 function PaymentContent() {
   const searchParams = useSearchParams();
   const id = searchParams.get("id");
-  const payment_intent_client_secret = searchParams.get("payment_intent_client_secret");
-  
+  const payment_intent_client_secret = searchParams.get(
+    "payment_intent_client_secret",
+  );
+
   const [booking, setBooking] = useState<BookingData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -26,7 +28,9 @@ function PaymentContent() {
     if (!id) return;
     try {
       setLoading(true);
-      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/booking/${id}`);
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/booking/${id}`,
+      );
       if (!res.ok) {
         throw new Error("Failed to load booking");
       }
@@ -76,14 +80,18 @@ function PaymentContent() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="bg-white p-8 rounded-xl shadow-sm border border-green-200 text-center max-w-sm w-full">
-          <h2 className="text-2xl font-bold text-green-600 mb-2">Payment Successful!</h2>
+          <h2 className="text-2xl font-bold text-green-600 mb-2">
+            Payment Successful!
+          </h2>
           <p className="text-gray-600">Your booking is confirmed.</p>
         </div>
       </div>
     );
   }
 
-  const isComplete = booking.client_secret && booking.payment_status === "PENDING";
+  const isComplete =
+    booking.client_secret && booking.payment_status === "PENDING";
+  console.log(booking.client_secret, booking.payment_status);
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -103,8 +111,11 @@ function PaymentContent() {
               <BookingForm booking={booking} onSuccess={fetchBooking} />
             ) : (
               stripePromise && (
-                <Elements stripe={stripePromise} options={{ clientSecret: booking.client_secret! }}>
-                  <CheckoutForm />
+                <Elements
+                  stripe={stripePromise}
+                  options={{ clientSecret: booking.client_secret! }}
+                >
+                  <CheckoutForm clientSecret={booking.client_secret!} />
                 </Elements>
               )
             )}
@@ -117,11 +128,13 @@ function PaymentContent() {
 
 export default function PaymentPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="animate-pulse text-gray-500">Loading...</div>
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+          <div className="animate-pulse text-gray-500">Loading...</div>
+        </div>
+      }
+    >
       <PaymentContent />
     </Suspense>
   );
