@@ -1,7 +1,7 @@
 import stripe
 import os
 from dotenv import load_dotenv
-from db.models import Booking
+from db.models import Booking, PaymentStatus
 from sqlalchemy import select
 from arq.connections import RedisSettings
 from db.session import AsyncSessionLocal
@@ -9,7 +9,7 @@ from db.session import AsyncSessionLocal
 load_dotenv()
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 
-async def cancel_booking_task(ctx, booking_id: int):
+async def cancel_booking_task(ctx, booking_id: str):
     async with AsyncSessionLocal() as db:
         try:
             stmt = select(Booking).where(Booking.id == booking_id)
@@ -22,8 +22,8 @@ async def cancel_booking_task(ctx, booking_id: int):
             
             intent = stripe.PaymentIntent.retrieve(booking.payment_id)
             
-            if intent.status != "succeeded" and booking.payment_status != "SUCCESSFUL":
-                booking.payment_status = "CANCELED"
+            if intent.status != "succeeded" and booking.payment_status != PaymentStatus.SUCCESSFUL:
+                booking.payment_status = PaymentStatus.CANCELED
                 await db.commit()
                 print(f"Booking {booking_id} cancelled (Payment status: {intent.status})")
             else:

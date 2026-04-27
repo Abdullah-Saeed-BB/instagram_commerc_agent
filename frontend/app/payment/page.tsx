@@ -1,63 +1,53 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import React, { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import Image from "next/image";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements } from "@stripe/react-stripe-js";
-import { ManualCheckout } from "@/components/payment/ManualCheckout";
-import { BookingDetails } from "@/components/payment/BookingDetails";
 import { BookingData } from "@/components/payment/types";
+import { BookingSummary } from "@/components/payment/BookingSummary";
+import { BookingForm } from "@/components/payment/BookingForm";
+import { CheckoutForm } from "@/components/payment/CheckoutForm";
 
-const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
-const stripePromise = publishableKey ? loadStripe(publishableKey) : null;
+const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY 
+  ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) 
+  : null;
 
 function PaymentContent() {
   const searchParams = useSearchParams();
   const id = searchParams.get("id");
-  const [bookingData, setBookingData] = useState<BookingData | null>(null);
+  const payment_intent_client_secret = searchParams.get("payment_intent_client_secret");
+  
+  const [booking, setBooking] = useState<BookingData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!id) {
-      setLoading(false);
-      return;
-    }
-
-    const fetchBooking = async () => {
-      try {
-        const url = `${process.env.NEXT_PUBLIC_BACKEND_URL}/booking/${id}`;
-        const response = await fetch(url);
-        const result = await response.json();
-        if (!response.ok) {
-          throw new Error("Failed to fetch booking details");
-        } else if (result.status_code && result.status_code !== 200) {
-          throw new Error(result.detail);
-        }
-        setBookingData(result);
-      } catch (err: any) {
-        setError(err.message || "Something went wrong");
-      } finally {
-        setLoading(false);
+  const fetchBooking = async () => {
+    if (!id) return;
+    try {
+      setLoading(true);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/booking/${id}`);
+      if (!res.ok) {
+        throw new Error("Failed to load booking");
       }
-    };
+      const data = await res.json();
+      setBooking(data);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchBooking();
   }, [id]);
 
-  if (!publishableKey) {
-    return (
-      <div className="p-10 text-center text-[#087BA3]">Missing Stripe Key</div>
-    );
-  }
-
   if (!id) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#F5F7F7] p-4">
-        <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-100 max-w-sm w-full text-center">
-          <h2 className="text-[#087BA3] font-bold text-xl mb-2">Error</h2>
-          <p className="text-[#51A1BD]">Missing booking ID parameter.</p>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-200 text-center max-w-sm w-full">
+          <p className="text-gray-600">No booking ID provided.</p>
         </div>
       </div>
     );
@@ -65,116 +55,73 @@ function PaymentContent() {
 
   if (loading) {
     return (
-      <div className="h-screen bg-[#F5F7F7] flex items-center justify-center">
-        <div className="w-12 h-12 border-4 border-[#51A1BD] border-t-[#087BA3] rounded-full animate-spin"></div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="animate-pulse text-gray-500">Loading...</div>
       </div>
     );
   }
 
-  if (error || !bookingData) {
+  if (error || !booking) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-[#F5F7F7] p-4">
-        <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-100 max-w-sm w-full text-center">
-          <h2 className="text-[#087BA3] font-bold text-xl mb-2">Error</h2>
-          <p className="text-[#51A1BD]">{error || "Booking not found."}</p>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-200 text-center max-w-sm w-full">
+          <p className="text-red-600">{error || "Booking not found."}</p>
         </div>
       </div>
     );
   }
 
-  const {
-    client_secret,
-    service,
-    amount,
-    booking_datetime,
-    customer_name,
-    payment_status,
-    barber,
-  } = bookingData;
+  // Handle successful payment redirect
+  if (payment_intent_client_secret && booking.payment_status === "SUCCESSFUL") {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="bg-white p-8 rounded-xl shadow-sm border border-green-200 text-center max-w-sm w-full">
+          <h2 className="text-2xl font-bold text-green-600 mb-2">Payment Successful!</h2>
+          <p className="text-gray-600">Your booking is confirmed.</p>
+        </div>
+      </div>
+    );
+  }
 
-  // Removed missing client_secret check so the user can see edit form
+  const isComplete = booking.client_secret && booking.payment_status === "PENDING";
 
   return (
-    <div className="min-h-screen bg-[#F5F7F7] flex flex-col items-center py-12 px-4 md:pt-20 md:pb-6">
-      {/* Brand Section */}
-      <div className="mb-12 text-center">
-        <div className="relative w-16 h-16 mx-auto mb-4 group">
-          <div className="absolute inset-0 bg-[#087BA3] opacity-20 blur-xl group-hover:opacity-30 transition-opacity rounded-full"></div>
-          <Image
-            src="/logo.png"
-            alt="Logo"
-            fill
-            className="object-contain relative z-10"
-            priority
-          />
+    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-4xl mx-auto">
+        <div className="text-center mb-10">
+          <h1 className="text-3xl font-bold text-gray-900">Silver Blade</h1>
+          <p className="mt-2 text-gray-600">Complete your booking securely</p>
         </div>
-        <h1 className="text-3xl font-bold text-[#087BA3] tracking-tight">
-          Silver blade
-        </h1>
-        <p className="text-[#51A1BD] text-sm mt-1">Secure Payment Portal</p>
-      </div>
 
-      {/* Responsive Layout Container */}
-      <div className="w-full max-w-5xl flex flex-col lg:flex-row items-center lg:items-start justify-center gap-8 lg:gap-12">
-        {/* Payment Form Container */}
-        {payment_status === "PENDING" && client_secret ? (
-          <div className="w-full max-w-md bg-white p-8 sm:p-10 rounded-2xl shadow-sm border border-gray-100 order-1 relative overflow-hidden">
-            <div className="absolute top-0 left-0 w-full h-1 bg-[#087BA3]"></div>
-            <Elements stripe={stripePromise}>
-              <ManualCheckout clientSecret={client_secret} />
-            </Elements>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div>
+            <BookingSummary booking={booking} />
           </div>
-        ) : payment_status === "PENDING" && !client_secret ? (
-          <div className="w-full max-w-md bg-white p-8 sm:p-10 rounded-2xl shadow-sm border border-gray-100 order-1 flex items-center justify-center text-center">
-             <p className="text-[#51A1BD]">Please fill in the missing booking details to proceed with payment.</p>
-          </div>
-        ) : null}
 
-        {/* Booking Details Container */}
-        <div className="w-full max-w-md lg:max-w-sm order-2">
-          <BookingDetails
-            id={id}
-            service={service}
-            price={amount?.toString() || null}
-            bookingDatetime={booking_datetime}
-            customerName={customer_name}
-            barber={barber?.name || null}
-            paymentStatus={payment_status}
-            onSaveSuccess={() => window.location.reload()}
-          />
+          <div>
+            {!isComplete ? (
+              <BookingForm booking={booking} onSuccess={fetchBooking} />
+            ) : (
+              stripePromise && (
+                <Elements stripe={stripePromise} options={{ clientSecret: booking.client_secret! }}>
+                  <CheckoutForm />
+                </Elements>
+              )
+            )}
+          </div>
         </div>
       </div>
-
-      {/* Helper Footer */}
-      {payment_status === "PENDING" && (
-        <div className="mt-12 text-center max-w-md">
-          <p className="text-xs uppercase tracking-widest text-slate-400 font-bold mb-4">
-            Test Mode Instructions
-          </p>
-          <span className="text-sm italic text-[#51A1BD] leading-relaxed block bg-white/50 py-3 px-6 rounded-lg border border-slate-100">
-            For <b>Card Number</b> enter{" "}
-            <code className="text-[#087BA3] font-bold">
-              4242 4242 4242 4242
-            </code>
-            <br />
-            For <b>Expiration</b> enter any future date, and <b>CVC</b> enter
-            any random values
-          </span>
-        </div>
-      )}
     </div>
   );
 }
 
-export default function FinalPaymentPage() {
+export default function PaymentPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="h-screen bg-[#F5F7F7] flex items-center justify-center">
-          <div className="w-12 h-12 border-4 border-[#51A1BD] border-t-[#087BA3] rounded-full animate-spin"></div>
-        </div>
-      }
-    >
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="animate-pulse text-gray-500">Loading...</div>
+      </div>
+    }>
       <PaymentContent />
     </Suspense>
   );
