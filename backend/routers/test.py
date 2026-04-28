@@ -9,6 +9,7 @@ import stripe
 import os
 from datetime import datetime
 
+import uuid
 from db.session import get_db
 from db.models import Booking, Barber, Services
 from dependencies import get_arq_pool
@@ -20,10 +21,10 @@ stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 
 
 class BillData(BaseModel):
-    service: Optional[str] = None
+    service_id: Optional[uuid.UUID] = None
     booking_datetime: Optional[datetime] = None
     name: Optional[str] = None
-    barber: Optional[str] = None
+    barber_id: Optional[uuid.UUID] = None
 
 
 @router.post("/create-payment")
@@ -48,15 +49,15 @@ async def create_payment(
         # ── Resolve service ───────────────────────────────────────────────────
         service_result = None
         service_id = None
-        if data.get("service"):
-            stmt = select(Services).where(Services.name == data["service"])
+        if data.get("service_id"):
+            stmt = select(Services).where(Services.id == data["service_id"])
             service_result = (await db.execute(stmt)).scalar_one_or_none()
             service_id = service_result.id if service_result else None
 
         # ── Resolve barber ────────────────────────────────────────────────────
         barber_id = None
-        if data.get("barber"):
-            stmt = select(Barber).where(Barber.name == data["barber"])
+        if data.get("barber_id"):
+            stmt = select(Barber).where(Barber.id == data["barber_id"])
             barber_result = (await db.execute(stmt)).scalar_one_or_none()
             barber_id = barber_result.id if barber_result else None
 
