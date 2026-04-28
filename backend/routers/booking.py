@@ -45,6 +45,8 @@ async def get_barbers(db: AsyncSession = Depends(get_db)):
 
 
 # ── GET /booking/availability ──────────────────────────────────────────────────
+from collections import defaultdict
+
 @router.get("/availability")
 async def get_availability(
     date: date,
@@ -53,34 +55,58 @@ async def get_availability(
 ):
     """
     Return available 30-minute slots for a given date.
-    If barber_id is provided, return slots available for that specific barber.
-    Otherwise, return slots where at least one barber is free.
+    Returns a list of objects containing the time and names of available barbers.
     """
     all_slots = generate_slots()
 
-    # Only consider active bookings (ignore FAILED / CANCELED)
+    # 1. Fetch all active barbers
+    barber_stmt = select(Barber)
+    if barber_id:
+        barber_stmt = barber_stmt.where(Barber.id == barber_id)
+    
+    barbers_result = await db.execute(barber_stmt)
+    active_barbers = barbers_result.scalars().all()
+    
+    # Create a lookup for barber names by ID
+    barber_lookup = {b.id: b.name for b in active_barbers}
+
+    # 2. Fetch existing bookings
     stmt = (
         select(Booking)
         .where(func.date(Booking.booking_datetime) == date)
         .where(Booking.payment_status.in_([PaymentStatus.PENDING, PaymentStatus.SUCCESSFUL]))
+        .where(Booking.payment_id != None)
     )
     result = await db.execute(stmt)
     bookings = result.scalars().all()
 
-    get_time = lambda b: b.booking_datetime.time() if b.booking_datetime else None
+    # 3. Create a map of {time: [list_of_booked_barber_ids]}
+    booked_map = defaultdict(set)
+    for b in bookings:
+        time_key = b.booking_datetime.time()
+        booked_map[time_key].add(b.barber_id)
 
-    if barber_id:
-        booked_times = {get_time(b) for b in bookings if b.barber_id == barber_id}
-        available = [s for s in all_slots if s not in booked_times]
-    else:
-        total_barbers_result = await db.execute(select(func.count(Barber.id)))
-        total_barbers = total_barbers_result.scalar() or 0
-        usage_counts = Counter(get_time(b) for b in bookings)
-        available = [s for s in all_slots if usage_counts[s] < total_barbers]
+    # 4. Build the structured response
+    available_data = []
+    
+    for slot_time in all_slots:
+        # Filter out barbers who are already booked at this specific time
+        free_barbers = [
+            {"id": b_id, "name": b_name}
+            for b_id, b_name in barber_lookup.items()
+            if b_id not in booked_map[slot_time]
+        ]
+
+        # Only add the slot if there is at least one barber free
+        if free_barbers:
+            available_data.append({
+                "time": slot_time.strftime("%H:%M"),
+                "available_barbers": free_barbers
+            })
 
     return {
         "date": date,
-        "available_slots": [s.strftime("%H:%M") for s in available],
+        "available_slots": available_data,
     }
 
 

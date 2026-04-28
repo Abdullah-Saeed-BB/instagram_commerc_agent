@@ -6,6 +6,11 @@ interface BookingFormProps {
   onSuccess: () => void;
 }
 
+interface AvailableSlot {
+  time: string;
+  available_barbers: { id: string; name: string }[];
+}
+
 export const BookingForm: React.FC<BookingFormProps> = ({
   booking,
   onSuccess,
@@ -18,7 +23,7 @@ export const BookingForm: React.FC<BookingFormProps> = ({
 
   const [services, setServices] = useState<ServiceData[]>([]);
   const [barbers, setBarbers] = useState<BarberData[]>([]);
-  const [availableSlots, setAvailableSlots] = useState<string[]>([]);
+  const [availableSlots, setAvailableSlots] = useState<AvailableSlot[]>([]);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -216,12 +221,14 @@ export const BookingForm: React.FC<BookingFormProps> = ({
               disabled={!bookingDate}
             >
               <option value="">Select a time</option>
-              {bookingTime && !availableSlots.includes(bookingTime) && (
-                <option value={bookingTime}>{bookingTime}</option>
-              )}
+              {bookingTime &&
+                !availableSlots.some((slot) => slot.time === bookingTime) && (
+                  <option value={bookingTime}>{bookingTime}</option>
+                )}
               {availableSlots.map((slot) => (
-                <option key={slot} value={slot}>
-                  {slot}
+                <option key={slot.time} value={slot.time}>
+                  {slot.time} |{" "}
+                  {slot.available_barbers.map((b) => b.name).join(", ")}
                 </option>
               ))}
             </select>
