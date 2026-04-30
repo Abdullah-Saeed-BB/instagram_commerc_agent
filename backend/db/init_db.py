@@ -47,16 +47,14 @@ async def init_db():
         # Create all tables
         await conn.run_sync(Base.metadata.create_all)
         
-        new_barbers = [
-            {'name': 'Moe Johnson', 'career_start_date': date(2010, 1, 18)},
-            {'name': 'John Doe', 'career_start_date': date(2012, 5, 3)},
-            {'name': 'Jane Miller', 'career_start_date': date(2014, 11, 12)},
-        ]
+        barbers = pd.read_csv("./data/barbers.csv")
+        barbers["career_start_date"] = pd.to_datetime(barbers["career_start_date"])
+        barbers_records = barbers.to_dict(orient="records")
 
-        for barber in new_barbers:
+        for barber in barbers_records:
             await conn.execute(
-                text("INSERT INTO barbers (name, career_start_date) VALUES (:name, :career_start_date)"),
-                {"name": barber["name"], "career_start_date": barber["career_start_date"]}
+                text("INSERT INTO barbers (id, name, career_start_date) VALUES (:id, :name, :career_start_date)"),
+                {"id": barber["id"], "name": barber["name"], "career_start_date": barber["career_start_date"]}
             )
 
         services = pd.read_csv("./data/services.csv")
@@ -69,8 +67,8 @@ async def init_db():
 
         for service in services_records:
             await conn.execute(
-                text("INSERT INTO services (name, description, price) VALUES (:name, :description, :price)"),
-                {"name": service["title"], "description": service["description"], "price": service["price"]}
+                text("INSERT INTO services (id, name, description, price) VALUES (:id, :name, :description, :price)"),
+                {"id": service["id"], "name": service["title"], "description": service["description"], "price": service["price"]}
             )
         
         await conn.commit()
