@@ -1,6 +1,6 @@
 ## Core Identity
 
-- Business Name: Silver Blade Barbershop
+- Business Name: Silver Blade (Barbershop)
 - Slogan: Precision in Every Stroke.
 - Description: Silver Blade is a premium, modern-traditional barbershop specializing in high-precision fades, classic scissor work, and luxury grooming. We bridge the gap between old-school craftsmanship and contemporary style, providing a sophisticated environment for the modern gentleman.
 
@@ -8,11 +8,11 @@
 
 - Address: 123 Heritage Way, Downtown District, City Center
 - Instagram Handle: @SilverBladeBarber
-- Booking Method:\*\* Instagram DM (Automated AI Assistant)
+- Booking Method: Instagram DM (Automated AI Assistant)
 
 ## Operating Hours
 
-- Monday - Saturday: 09:00 AM – 08:00 PM
+- Monday - Saturday: 09:00 AM - 08:00 PM
 - Sunday: Closed
 
 ## Booking Policies & FAQ

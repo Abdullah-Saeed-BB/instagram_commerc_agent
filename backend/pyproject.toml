@@ -24,4 +24,7 @@ dependencies = [
     "langchain-postgres>=0.0.17",
     "chromadb>=1.5.8",
     "langchain-text-splitters>=1.1.2",
+    "langchain-community>=0.4.1",
+    "langchain-chroma>=1.1.0",
+    "sentence-transformers>=5.4.1",
 ]
