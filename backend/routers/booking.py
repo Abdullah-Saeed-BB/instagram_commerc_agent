@@ -203,8 +203,14 @@ async def update_booking(
         if booking_update.barber is not None:
             barber_stmt = select(Barber).where(Barber.name == booking_update.barber)
             barber = (await db.execute(barber_stmt)).scalar_one_or_none()
+
             if not barber:
                 raise HTTPException(status_code=404, detail="Barber not found")
+            
+            is_barber_free = (await db.execute(select(Booking).where(Booking.barber_id == barber.id, Booking.booking_datetime == booking.booking_datetime)))
+            if is_barber_free:
+                raise HTTPException(status_code=400, detail="Barber is not free at the selected time")
+
             booking.barber_id = barber.id
             booking.barber = barber
 
